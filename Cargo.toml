@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "nexsys-math",
+    "nexsys-core",
+    "nexsys-tests"
+]
