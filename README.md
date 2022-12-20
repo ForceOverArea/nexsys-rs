@@ -3,9 +3,7 @@
 
 **Simple code for complex engineering** 
 <br>
-Nexsys is a "language" for engineers to help solve equations and develop complex mathematical models to ease the design process.
-<br>
-The Nexsys crate serves multiple functions and aims to be adaptable to a range of situations. Whether you're solving equations in another application or just trying to crunch out an engineering problem, Nexsys aims to have a solution.
+Nexsys is a "language" for engineers to help solve equations and develop complex mathematical models to ease the design process. The Nexsys crate serves multiple functions and aims to be adaptable to a range of situations. Whether you're solving equations in another application or just trying to crunch out an engineering problem, Nexsys aims to have a solution.
 <br>
 <br>
 
