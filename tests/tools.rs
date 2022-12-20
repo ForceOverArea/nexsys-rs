@@ -1,11 +1,10 @@
-pub fn round(num: f64, places: usize) -> f64 {
-    let res = num.to_string();
-    let idx = res.find('.').unwrap();
+pub use nexsys::mvcalc::round;
 
-    let lead = res[0..idx].to_string();
-    let tail = res[idx+1..res.len()][0..places].to_string();
-
-    (lead + "." + &tail).parse::<f64>().unwrap()
+#[macro_export]
+macro_rules! assert_thou {
+    ($a:expr, $b:expr) => {
+        assert!(($a - $b).abs() < 0.001)
+    };
 }
 
 #[macro_export]

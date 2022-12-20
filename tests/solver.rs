@@ -3,7 +3,7 @@ mod tools;
 use std::collections::HashMap;
 use nexsys::algos::{BlockMgr, Equation, Variable};
 use nexsys::solver::Nexsys;
-use tools::round;
+use nexsys::solve;
 
 #[test]
 fn test_equation() {
@@ -68,17 +68,46 @@ fn test_solver_engine() {
         
         1e-10, 300, false );
 
-    let soln = my_sys.solve().unwrap();
+    let soln = match my_sys.solve() {
+        Ok(o) => o,
+        Err(e) => panic!("{}", e)  
+    };
+
 
     println!("{}", soln.1.join("\n"));
 
     let x = "x".to_string();
     let y = "y".to_string();
 
-    assert!(
-        round(soln.0[&x].as_f64(), 3) - 6.5 <= 0.001
-    );
-    assert!(
-        round(soln.0[&y].as_f64(), 3) - 2.5 <= 0.001
-    );
+    assert_thou!(soln.0[&x].as_f64(), 6.5);
+    assert_thou!(soln.0[&y].as_f64(), 2.5);
+}
+
+#[test]
+fn test_solver_w_conditional() {
+    let my_code = r#"
+    a = -4
+    if [a < 0] {
+        b = sqrt(-a)
+    } else {
+        b = sqrt(a)
+    }
+    "#;
+
+    let (soln, _) = solve(my_code, None, None, false).unwrap();
+
+    assert_thou!(soln["b"].as_f64(), 2.0);
+}
+
+#[test]
+fn test_solver_w_conversions() {
+    let my_code = r#"
+    a = 2.54 * [cm->in]
+    b = 12 * a * [in->ft]
+    c = b * [ft->cm]
+    "#;
+
+    let (soln, _) = solve(my_code, Some(1E-10), None, false).unwrap();
+
+    assert_thou!(soln["c"].as_f64(), 30.48);
 }

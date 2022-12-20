@@ -1,7 +1,7 @@
 [package]
 name = "nexsys"
 description = "Solve nonlinear systems of equations using Newton's method."
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 license = "GPL-3.0-or-later"
 readme = "README.md"
@@ -16,8 +16,11 @@ path = "tests/solver.rs"
 name = "math"
 path = "tests/math.rs"
 
+[[test]]
+name = "parsers"
+path = "tests/parsers.rs"
+
 [features]
-default = ["python_ffi"]
 python_ffi = ["pyo3"]
 
 [[bin]]
@@ -33,3 +36,4 @@ lazy_static = "1.4.0"
 meval = "0.2.0"
 pyo3 = { version = "0.17.3", features = ["extension-module"], optional = true }
 regex = "1.7.0"
+serde_json = "1.0.89"

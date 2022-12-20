@@ -39,7 +39,7 @@ fn _5x5_matrix_inversion() {
     .map(
         |i| {
             i.iter().map(|&j| {
-                round(j, 4)
+                round(j, 4).unwrap()
             }).collect::<Vec<f64>>()
         }).collect::<Vec<Vec<f64>>>();
 
