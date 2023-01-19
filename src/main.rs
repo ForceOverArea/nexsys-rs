@@ -16,7 +16,8 @@ OPTIONS:
 --tolerance, -tol <float>              The tolerance that the solver should hit before returning a solution
 --max-iterations, -max <int>           The maximum number of iterations that the solver can take to converge
 --allow-nonconvergence, -ancv          Whether or not the solver should allow a solution to not converge
---verbose -v
+--output-file, -o                      Sends the results to a .txt file rather than printing them in the terminal
+--verbose -v                           Prints compiled nexsys code in the terminal for debugging
 "#
         );
         process::exit(0);
@@ -33,7 +34,7 @@ OPTIONS:
     let mut tolerance = None;
     let mut max_iterations = None; 
     let mut allow_nonconvergence = false;
-    // let mut output_format = "md"; // todo: make this produce different file types
+    let mut output_file = false; // todo: make this produce different file types
 
     for i in 0..args.len() {
         if args[i] == *"--tolerance" || args[i] == *"-tol" {
@@ -71,7 +72,11 @@ OPTIONS:
             preprocess = consts(&preprocess).unwrap();
             preprocess = conditionals(&preprocess).unwrap();
             
-            println!("\n\n{}\n", preprocess);
+            println!("\n{}\n", preprocess);
+        }
+        if args[i] == *"--to-file" || args[i] == *"-o" {
+            println!("[nxc].....Writing to file...");
+            output_file = true;
         }
     }
 
@@ -85,17 +90,22 @@ OPTIONS:
     };
 
     let output = format!(
-        "# **[->] Nexsys** - *{}* results:\n\n**Solution:**\n\n{}\n___\n**Solution Procedure:**\n\n{}",
+        "[->] Nexsys - {} results:\n\nSolution:\n+=======+\n{}\nProcedure:\n+========+\n{}\n",
         &args[1],
-        soln.into_iter().map(|i| format!("{} = {}\n\n", i.0, i.1.as_f64())).collect::<String>(),
-        log.join("\n\n")
+        soln.into_iter().map(|i| format!("{} = {}\n", i.0, i.1.as_f64())).collect::<String>(),
+        log.join("\n")
     );
 
-    match write(args[1].replace(".nxs", ".md"), output) {
-        Ok(_) => process::exit(0),
-        Err(_) => {
-            println!("[nxc].....ERR: nxc could not write to the output file");
-            process::exit(1);
+    if output_file {
+        match write(args[1].replace(".nxs", ".txt"), output) {
+            Ok(_) => process::exit(0),
+            Err(_) => {
+                println!("[nxc].....ERR: nxc could not write to the output file");
+                process::exit(1);
+            }
         }
+    } else {
+        println!("{}", output);
+        process::exit(0);
     }
 }

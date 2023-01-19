@@ -125,7 +125,6 @@ pub fn newton_raphson<'a>(equation: &'a str, guess: (&'a str, Variable), toleran
         
         count += 1;
         if count > max_iterations {
-            println!("count: {}\nerror{}", count, &f(xi.as_f64())?);
             return Ok(Solution::NonConverged((guess.0, xi)))
         }
     }
