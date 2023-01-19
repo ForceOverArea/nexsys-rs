@@ -1,1 +1,0 @@
-target\release\nxc exam.nxs

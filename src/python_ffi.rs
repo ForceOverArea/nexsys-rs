@@ -111,7 +111,7 @@ pub fn py_solve(system: &str, tolerance: f64, max_iterations: usize, allow_nonco
 }
 
 #[pymodule]
-fn _nexsys(_py: Python, m: &PyModule) -> PyResult<()> {
+fn nexsys(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyNexsys>()?;
     m.add_function(wrap_pyfunction!(py_solve, m)?)?;
     Ok(())
