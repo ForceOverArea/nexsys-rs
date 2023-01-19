@@ -1,0 +1,10 @@
+keep x on [-10, 0]
+guess -3 for x
+
+x^2 = 9
+
+if [x < 0] {
+    neg = #true
+} else {
+    neg = #false
+}

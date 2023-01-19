@@ -58,7 +58,7 @@ pub fn guess_values(text: &str) -> HashMap<String, f64> {
     let guesses = RE.find_iter(text)
         .map(
             |i| {
-                i.as_str().split(" ").collect::<Vec<&str>>()
+                i.as_str().split(' ').collect::<Vec<&str>>()
             }
         ).collect::<Vec<Vec<&str>>>();
 
@@ -77,7 +77,7 @@ pub fn domains(text: &str) -> HashMap<String, [f64; 2]> {
     let domains = RE.find_iter(text)
         .map(
             |i| {
-                i.as_str().split(" ").collect::<Vec<&str>>()
+                i.as_str().split(' ').collect::<Vec<&str>>()
             }
         ).collect::<Vec<Vec<&str>>>();
 
@@ -96,8 +96,7 @@ pub fn domains(text: &str) -> HashMap<String, [f64; 2]> {
         }
        
         let bounds = bound_string
-        .replace("[","")
-        .replace("]","")
+        .replace(['[', ']'], "")
         .split(", ")
         .map(|i| i.parse().unwrap())
         .collect::<Vec<f64>>();
@@ -117,12 +116,12 @@ pub fn imports(text: &str, tolerance: Option<f64>, max_iterations: Option<usize>
 
     for stmnt in statements {
 
-        let raw_stmnt: Vec<&str> = stmnt.as_str().split("]").collect();
+        let raw_stmnt: Vec<&str> = stmnt.as_str().split(']').collect();
 
         let contents = read_to_string( cleanup!(raw_stmnt[0].to_string(), "[") ).expect("failed to locate file");
         
         let clean_vars = cleanup!(raw_stmnt[1].to_string(), "->", " ");
-        let vars: Vec<&str> = clean_vars.split(",").collect();
+        let vars: Vec<&str> = clean_vars.split(',').collect();
 
         let soln = solve(&contents, tolerance, max_iterations, allow_nonconvergence)
         .expect("failed to solve imported system").0

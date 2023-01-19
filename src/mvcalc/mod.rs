@@ -37,7 +37,7 @@ pub fn functionify<S>(text: S) -> impl Fn(&HashMap<S, Variable>) -> Result<f64, 
 where
     S: Copy + AsRef<str> + Display + Into<String>
 {
-    let func = move |v:&HashMap<S, Variable>| -> Result<f64, Box<dyn Error>> {
+    move |v:&HashMap<S, Variable>| -> Result<f64, Box<dyn Error>> {
         
         let mut ctx = new_context();
         
@@ -49,9 +49,7 @@ where
             Ok(o) => Ok(o),
             Err(e) => Err(Box::new(e))
         }
-    };
-
-    func
+    }
 }
 
 /// Returns the derivative of a function at a point.
@@ -101,7 +99,7 @@ where
     };
 
     // take the derivative of the partial function
-    Ok( d_dx(partial, guess[&target].as_f64())? )
+    d_dx(partial, guess[&target].as_f64())
 }
 
 /// Returns the dot product of two given vectors.
@@ -141,8 +139,8 @@ where
 
         let mut row = vec![];
 
-        for j in 0..rhs.len() {
-            row.push(mat[j][i]);
+        for j in mat.iter().take(rhs.len()) {
+            row.push(j[i]);
         }
 
         res.push(vec_vec_dot(&rhs, &row)?)
@@ -234,5 +232,5 @@ pub fn jacobian(system: &Vec<&str>, guess: &HashMap<&str, Variable>) -> Result<N
         mat.push(col);
     };
 
-    Ok( NxN::from_cols( mat, Some(vec.0) )? )
+    NxN::from_cols( mat, Some(vec.0) )
 }

@@ -5,7 +5,7 @@ use nexsys::{solve, parsing::{conditionals, conversions, consts}};
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() == 1 || args[1] == format!("help") || args[1].contains(&format!("-h")) {
+    if args.len() == 1 || args[1] == *"help" || args[1] == *"-h" {
         println!(
 r#"Nexsys - Solve nonlinear systems using Newton's method
 
@@ -36,7 +36,7 @@ OPTIONS:
     // let mut output_format = "md"; // todo: make this produce different file types
 
     for i in 0..args.len() {
-        if &args[i] == &format!("--tolerance") || &args[i] == &format!("-tol") {
+        if args[i] == *"--tolerance" || args[i] == *"-tol" {
             match args[i+1].parse::<f64>() {
                 Ok(o) => {
                     println!("[nxc].....tolerance set to {}", o);
@@ -48,7 +48,7 @@ OPTIONS:
                 }
             }
         }
-        if &args[i] == &format!("--max-iterations") || &args[i] == &format!("-max") {
+        if args[i] == *"--max-iterations" || args[i] == *"-max" {
             match args[i+1].parse::<usize>() {
                 Ok(o) => {
                     println!("[nxc].....iteration limit set to: {}", o);
@@ -60,11 +60,11 @@ OPTIONS:
                 }
             }
         }
-        if &args[i] == &format!("--allow-nonconvergence") || &args[i] == &format!("-ancv") {
+        if args[i] == *"--allow-nonconvergence" || args[i] == *"-ancv" {
             println!("[nxc].....nonconvergence is allowed");
             allow_nonconvergence = true;
         }
-        if &args[i] == &format!("--verbose") || &args[i] == &format!("-v") {
+        if args[i] == *"--verbose" || args[i] == *"-v" {
             println!("[nxc].....Printing compiled code...");
 
             let mut preprocess = conversions(&system).unwrap();
@@ -91,7 +91,7 @@ OPTIONS:
         log.join("\n\n")
     );
 
-    match write(&args[1].replace(".nxs", ".md"), output) {
+    match write(args[1].replace(".nxs", ".md"), output) {
         Ok(_) => process::exit(0),
         Err(_) => {
             println!("[nxc].....ERR: nxc could not write to the output file");

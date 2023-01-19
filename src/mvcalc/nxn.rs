@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error};
 use crate::{
     mvcalc::*, 
     errors::{NxNInversionError, NxNCreationError}
@@ -75,7 +75,7 @@ impl NxN {
         }
 
         if cols.len() != cols[0].len() {
-            return Err(Box::new(NxNCreationError))
+            Err(Box::new(NxNCreationError))
         } else {
             let size = cols.len();
             let mat = cols.iter().map(
@@ -130,13 +130,14 @@ impl NxN {
     /// my_matrix.add_to_row(1, &vec![2, 2, 2]);
     /// assert_eq!(my_matrix.to_vec(), check);
     /// ```
-    pub fn add_to_row<T>(&mut self, row: usize, vec: &Vec<T>) 
+    pub fn add_to_row<T>(&mut self, row: usize, vec: &[T]) 
     where 
-        T: Into<f64> + Copy
+        T: Into<f64> + Copy,
+        f64: From<T>
     {
         let n = self.size;
-        for i in 0..n {
-            self.mat[i][row] += vec[i].into();
+        for (i, v) in vec.iter().enumerate().take(n) {
+            self.mat[i][row] += f64::from(*v);
         }
     }
 

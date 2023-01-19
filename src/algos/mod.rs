@@ -35,7 +35,7 @@ pub fn new_context() -> Context<'static> {
 /// Performs one iteration of Newton's method for a system of equations, returning the next guess vector. 
 fn next_guess<'a>(system: &Vec<&'a str>, mut guess: HashMap<&'a str, Variable>) -> Result<HashMap<&'a str, Variable>, Box<dyn Error>> {
 
-    let mut j = jacobian(&system, &guess)?;
+    let mut j = jacobian(system, &guess)?;
     j.invert()?;
 
     let mut err = None;
@@ -115,7 +115,7 @@ pub fn newton_raphson<'a>(equation: &'a str, guess: (&'a str, Variable), toleran
     };
 
     let mut count: usize = 0;
-    while &f(xi.as_f64())? > &tolerance {
+    while f(xi.as_f64())? > tolerance {
 
         let roc = d_dx(&mut f, xi.as_f64())?;
 
@@ -163,9 +163,9 @@ pub fn mv_newton_raphson<'a>( system: Vec<&'a str>, mut guess: HashMap<&'a str, 
                     ctx.var(*j.0, j.1.as_f64()); 
                 }
                 
-                let exp = i.replace("=", "-");
+                let exp = i.replace('=', "-");
                 
-                match eval_str_with_context(&exp, ctx) {
+                match eval_str_with_context(exp, ctx) {
                     Ok(o) => o.abs(),
                     Err(e) => {
                         err = Some(e);

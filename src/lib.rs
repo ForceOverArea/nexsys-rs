@@ -19,15 +19,17 @@ use algos::Variable;
 use solver::Nexsys;
 use parsing::*;
 
+type SolverOutput = (HashMap<String, Variable>, Vec<String>);
+
 pub fn solve(
     system: &str, 
     mut tolerance: Option<f64>, 
     mut max_iterations: Option<usize>, 
     allow_nonconvergence: bool
-) -> Result<(HashMap<String, Variable>, Vec<String>), Box<dyn Error>> {
+) -> Result<SolverOutput, Box<dyn Error>> {
 
-    if let None = tolerance { tolerance = Some(1E-5); }
-    if let None = max_iterations { max_iterations = Some(300); }
+    if tolerance        .is_none() { tolerance = Some(1E-5); }
+    if max_iterations   .is_none() { max_iterations = Some(300); }
 
     // let includes = includes(system);     // NOTE: Includes are pending implementation on account of "I think they're shitty and also bad".
     let mut preprocess  = conversions(system)?;

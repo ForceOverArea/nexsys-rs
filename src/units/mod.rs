@@ -9,9 +9,9 @@ fn generate_num_denom_units(mut data:HashMap<String, HashMap<String, f64>>, qty:
     
     let mut temp = HashMap::new();
     
-    for i in &data[&format!("{}", num)] {
+    for i in &data[&num.to_string()] {
     
-        for j in &data[&format!("{}", denom)] {
+        for j in &data[&denom.to_string()] {
     
             temp.insert(
                 format!("{}/{}", i.0, j.0),
@@ -35,12 +35,12 @@ fn generate_fact_fact_units(mut data:HashMap<String, HashMap<String, f64>>, qty:
     let mut temp = HashMap::new();
     
     if fc1 == fc2 {
-        for i in &data[&format!("{}", fc1)] {
+        for i in &data[&fc1.to_string()] {
             temp.insert( format!("{}^2", i.0), *i.1 * *i.1);
         }
     } else {
-        for i in &data[&format!("{}", fc1)] {
-            for j in &data[&format!("{}", fc2)] {
+        for i in &data[&fc1.to_string()] {
+            for j in &data[&fc2.to_string()] {
                 let val = *i.1 * *j.1;
                 temp.insert( format!("{}-{}", i.0, j.0), val);
                 temp.insert( format!("{}-{}", j.0, i.0), val);
@@ -60,7 +60,7 @@ fn generate_volume_units(mut data:HashMap<String, HashMap<String, f64>>) -> Hash
 
     let mut temp = HashMap::new();
     
-    for i in &data[&format!("LENGTH")] {
+    for i in &data[&"LENGTH".to_string()] {
         temp.insert( format!("{}^3", i.0), *i.1 * *i.1);    
     }
 
@@ -78,7 +78,7 @@ pub fn raw_unit_data() -> HashMap<String, HashMap<String, f64>> {
     let err = "failed to parse json... is the formatting of 'units.json' correct?";
     
     // again I ask, lord forgive me for what I am about to do...
-    let dejson: HashMap<String, HashMap<String, f64>> = from_str::<HashMap<&str, Value>>(&raw_text).expect(err).into_iter()
+    let dejson: HashMap<String, HashMap<String, f64>> = from_str::<HashMap<&str, Value>>(raw_text).expect(err).into_iter()
     .map(
         |i| (
             i.0.to_string(), 
@@ -98,7 +98,7 @@ pub fn raw_unit_data() -> HashMap<String, HashMap<String, f64>> {
 /// Generates a more complete set of unit conversion data by combining different units to create other common units.
 pub fn unit_data() -> HashMap<String, HashMap<String, f64>> {
     let mut data = raw_unit_data();
-    data.insert(format!("SPRING FORCE"), HashMap::new());
+    data.insert("SPRING FORCE".to_string(), HashMap::new());
 
     data = generate_fact_fact_units(data, "AREA",               "LENGTH",           "LENGTH");
     data = generate_fact_fact_units(data, "VISCOSITY-DYNAMIC",  "PRESSURE",         "TIME");
@@ -144,7 +144,7 @@ pub fn const_data() -> HashMap<String, f64> {
     let err = "failed to parse json... is the formatting of consts.json correct?";
     
     // thankfully this isn't as bad as reading units.json
-    let dejson: HashMap<String, f64> = from_str::<HashMap<&str, Value>>(&raw_text).expect(err).into_iter()
+    let dejson: HashMap<String, f64> = from_str::<HashMap<&str, Value>>(raw_text).expect(err).into_iter()
     .map(
         |i| {
             let err = format!("failed to parse json: {:#?}", i.1);

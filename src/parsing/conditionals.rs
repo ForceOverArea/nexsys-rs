@@ -55,7 +55,7 @@ pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error
     .replace("if[", "if(")  // make start of function call
     .replace("]{", ",")     // delimit arguments
     .replace("}else{", ",") // "
-    .replace("}", ")");     // close function call
+    .replace('}', ")");     // close function call
 
     //if(a<b,a-b=1,b-a=1)
     // println!("SUBBED TOKENS: {}", args);
@@ -68,22 +68,22 @@ pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error
     if args.contains("==") {args = args.replace("==", ",1.0,");} 
     if args.contains("<=") {args = args.replace("<=", ",2.0,");} 
     if args.contains(">=") {args = args.replace(">=", ",3.0,");} 
-    if args.contains("<") {
+    if args.contains('<') {
 
         if args.contains("=<") {
             return Err(Box::new(ConditionFormatError::Comparator))
         }
 
-        args = args.replace("<",  ",4.0,");
+        args = args.replace('<',  ",4.0,");
         
     } 
-    if args.contains(">") {
+    if args.contains('>') {
         
         if args.contains("=>") {
             return Err(Box::new(ConditionFormatError::Comparator))
         }
 
-        args = args.replace(">",  ",5.0,");
+        args = args.replace('>',  ",5.0,");
                 
     } 
     if args.contains("!=") {args = args.replace("!=", ",6.0,");}
@@ -106,11 +106,11 @@ pub fn conditionals(text: &str) -> Result<String, Box<dyn Error>> {
     for raw in cdls {
 
         // format equations contained in the conditional via .map(), then pass to format_conditional()
-        let fmt_eqns = raw.split("\n").map(|line| {
+        let fmt_eqns = raw.split('\n').map(|line| {
             
-            if line.contains("=") && !(contains_any!(line, "[", "]", "<", ">")) {
+            if line.contains('=') && !(contains_any!(line, "[", "]", "<", ">")) {
                 
-                let terms = line.split("=").collect::<Vec<&str>>();
+                let terms = line.split('=').collect::<Vec<&str>>();
                 
                 format!("{} - ({})", terms[0], terms[1])
             

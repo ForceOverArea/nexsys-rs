@@ -95,7 +95,7 @@ impl Equation {
 
     /// Returns the equation as an expression that evaluates to 0 when the system is solved.
     pub fn as_expr(&self) -> String {
-        let terms = self.text.split("=").collect::<Vec<&str>>();
+        let terms = self.text.split('=').collect::<Vec<&str>>();
         format!("{} - ({})", terms[0], terms[1])
     }
 
@@ -123,7 +123,7 @@ impl Equation {
                     "signum", "atan2", 
                     "max",    "min",   "if"
                     ].contains(&i.as_str())
-        ).collect::<Vec<&String>>().len()
+        ).count()
     }
 
     /// Returns a `Vec` containing the variables that are unknowns in the equation.
@@ -140,9 +140,7 @@ impl Equation {
                 "signum", "atan2", 
                 "max",    "min",   "if"
                 ].contains(&i.as_str())
-        ).map(
-            |i| i.clone()
-        ).collect::<Vec<String>>()
+        ).cloned().collect()
     }
 
 }
@@ -168,15 +166,15 @@ impl <'a> BlockMgr<'a> {
 
     /// Adds an equation to the BlockMgr, classifying it by number of unknowns and common unknowns.
     pub fn add_item(&mut self, expr: &Equation) {
-        let n = expr.n_unknowns(&self.ctx);
-        let uks = expr.unknowns(&self.ctx);
+        let n = expr.n_unknowns(self.ctx);
+        let uks = expr.unknowns(self.ctx);
 
         if n < 1 {
             return; // do nothing if there are fewer than 2 unknowns in the equation
         }
 
         // Add slots to accommodate 
-        if self.blocks.len() == 0 {
+        if self.blocks.is_empty() {
             self.blocks = Vec::with_capacity(n);
         }
 
@@ -206,7 +204,7 @@ impl <'a> BlockMgr<'a> {
                 }
             }
         }
-        if eqns.len() == 0 {
+        if eqns.is_empty() {
             None
         } else {
             Some(eqns)

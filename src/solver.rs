@@ -1,5 +1,5 @@
 use std::{collections::HashMap, error::Error};
-use crate::{algos::*, cleanup, parsing::legal_variable, errors::SolverConvergenceError};
+use crate::{algos::*, cleanup, parsing::legal_variable, errors::SolverConvergenceError, SolverOutput};
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -32,9 +32,9 @@ impl Nexsys {
     /// or string data passed from other programs.
     pub fn new(text: &str, tolerance: f64, max_iterations: usize, allow_nonconvergence: bool) -> Nexsys {
 
-        let equations = text.split("\n")
-        .filter(|i| i.contains("="))
-        .map(|i| Equation::new(i))
+        let equations = text.split('\n')
+        .filter(|i| i.contains('='))
+        .map(Equation::new)
         .collect();
 
         let guesses = HashMap::new();
@@ -118,10 +118,9 @@ impl Nexsys {
                     Some(&val) => val,
                     None => 1.0
                 },
-                match self.domains.get(target) {
-                    Some(&dom) => Some(dom),
-                    None => None
-                }
+                self.domains
+                    .get(target)
+                    .copied()
             );
 
             let expr = self.substitute(eqn.as_expr());
@@ -176,7 +175,7 @@ impl Nexsys {
 
         let blocks = blks.constrained();
         
-        if let None = blocks {
+        if blocks.is_none() {
             return Ok(Progress::NoneSolved)
         }
 
@@ -247,7 +246,7 @@ impl Nexsys {
 
     /// Solves the equations passed to the Nexsys solver, consuming the `self` value and 
     /// returning the solution to the system as a `HashMap`.
-    pub fn solve(mut self) -> Result<(HashMap<String, Variable>, Vec<String>), Box<dyn Error>> {
+    pub fn solve(mut self) -> Result<SolverOutput, Box<dyn Error>> {
         loop {
             match self.light_work()? {
                 Progress::Solved => {
