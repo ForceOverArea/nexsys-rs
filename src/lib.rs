@@ -28,7 +28,7 @@ pub fn solve(
     allow_nonconvergence: bool
 ) -> Result<SolverOutput, Box<dyn Error>> {
 
-    if tolerance        .is_none() { tolerance = Some(1E-5); }
+    if tolerance        .is_none() { tolerance = Some(1E-10); }
     if max_iterations   .is_none() { max_iterations = Some(300); }
 
     // let includes = includes(system);     // NOTE: Includes are pending implementation on account of "I think they're shitty and also bad".
