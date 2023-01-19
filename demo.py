@@ -1,9 +1,11 @@
 import nexsys
 
-soln, log = nexsys.py_solve("""
-keep x on [-10, 0]
-guess -2.5 for x
+print(nexsys.solve.__doc__)
 
-x^2 = 9
-""",
-1E-10, 300, False)
+# get code from demo.nxs file
+with open("./demo.nxs","r") as f:    
+    nexsys_code = f.read()
+
+soln, _ = nexsys.solve(nexsys_code)
+
+print(soln)

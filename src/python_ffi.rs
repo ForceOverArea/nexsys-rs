@@ -19,7 +19,7 @@ pub struct PyNexsys {
 #[pymethods]
 impl PyNexsys {
     #[new]
-    #[args(tol = "1E-10", limit = "300", nonconvergence = "false")]
+    #[pyo3(signature = (text, tol = 1E-10, limit = 300, nonconvergence = false))]
     fn new<'a>(text: &'a str, tol: f64, limit: usize, nonconvergence: bool) -> PyResult<PyNexsys> {
         Ok(PyNexsys {
             system: Some(Nexsys::new(text, tol, limit, nonconvergence))
@@ -96,6 +96,7 @@ impl PyNexsys {
 
 /// The Python-accessible Nexsys interpreter function
 #[pyfunction]
+#[pyo3(signature = (system, tolerance = 1E-10, max_iterations = 300, allow_nonconvergence = false))]
 pub fn py_solve(system: &str, tolerance: f64, max_iterations: usize, allow_nonconvergence: bool) -> PyResult<(HashMap<String, f64>, Vec<String>)> {
     match solve(system, Some(tolerance), Some(max_iterations), allow_nonconvergence) {
         Ok(o) => {
@@ -110,7 +111,7 @@ pub fn py_solve(system: &str, tolerance: f64, max_iterations: usize, allow_nonco
 }
 
 #[pymodule]
-fn nexsys(_py: Python, m: &PyModule) -> PyResult<()> {
+fn _nexsys(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyNexsys>()?;
     m.add_function(wrap_pyfunction!(py_solve, m)?)?;
     Ok(())
