@@ -20,7 +20,7 @@ pub struct PyNexsys {
 impl PyNexsys {
     #[new]
     #[pyo3(signature = (text, tol = 1E-10, limit = 300, nonconvergence = false))]
-    fn new<'a>(text: &'a str, tol: f64, limit: usize, nonconvergence: bool) -> PyResult<PyNexsys> {
+    fn new(text: &str, tol: f64, limit: usize, nonconvergence: bool) -> PyResult<PyNexsys> {
         Ok(PyNexsys {
             system: Some(Nexsys::new(text, tol, limit, nonconvergence))
         })
@@ -29,7 +29,7 @@ impl PyNexsys {
     /// Manually inserts a value into the system solution. This can be 
     /// used to parametrize Nexsys code in a way that is more 
     /// accessible to another program.
-    pub fn edit<'a>(&mut self, var: &'a str, value: f64) {
+    pub fn edit(&mut self, var: &str, value: f64) {
         if let Some(n) = &mut self.system {
             n.edit(var, value);
         }

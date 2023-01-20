@@ -1,4 +1,4 @@
-<img title="Nexsys Logo" alt="Nexsys Logo" src="./NexsysLogoFull.png">
+<img title="Nexsys Logo" alt="Nexsys Logo" src="./nexsys_logo_full.png" height="100px">
 <br>
 
 **Simple code for complex engineering** 
@@ -13,7 +13,7 @@ The nexsys crate offers a broad range of tools for addressing engineering proble
 <br>
 
 # **The `nexsys` Python package:**
-While narrower in scope, the nexsys Python package leverages `pyo3` to bring the speed of the Nexsys interpreter and solver engine to the ease-of-use of Python. Use the `Nexsys` solver engine object to programmatically solve systems of equations or the `py_solve` function to interpret Nexsys code in Python and use the results elsewhere. Just run `pip intall nexsys` to get started.
+While narrower in scope, the nexsys Python package leverages `pyo3` to bring the speed of the Nexsys interpreter and solver engine to the ease-of-use of Python. Use the `Nexsys` solver engine object to programmatically solve systems of equations or the `py_solve` function to interpret Nexsys code in Python and use the results elsewhere. Just run `pip install nexsys` to get started.
 <br>
 <br>
 
