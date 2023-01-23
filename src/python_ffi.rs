@@ -18,6 +18,7 @@ pub struct PyNexsys {
 }
 #[pymethods]
 impl PyNexsys {
+    /// Instantiates a new Nexsys object in Python (a.k.a. `__init__`)
     #[new]
     #[pyo3(signature = (text, tol = 1E-10, limit = 300, nonconvergence = false))]
     fn new(text: &str, tol: f64, limit: usize, nonconvergence: bool) -> PyResult<PyNexsys> {
@@ -110,6 +111,7 @@ pub fn py_solve(system: &str, tolerance: f64, max_iterations: usize, allow_nonco
     }
 }
 
+/// The nexsys Python module
 #[pymodule]
 fn nexsys(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyNexsys>()?;

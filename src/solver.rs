@@ -4,6 +4,8 @@ use crate::{algos::*, cleanup, parsing::legal_variable, errors::SolverConvergenc
 #[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq)]
+/// Denotes whether `Nexsys.light_work` or `Nexsys.heavy_work` 
+/// could find any properly constrained equations or systems.
 enum Progress {
     Solved,
     NoneSolved

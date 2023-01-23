@@ -67,6 +67,7 @@ impl Variable {
         self.value
     }
 
+    /// Returns `self.domain` as `Option<[f64; 2]>`
     pub fn get_domain(&self) -> Option<[f64; 2]> {
         self.domain
     }

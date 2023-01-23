@@ -10,7 +10,7 @@ macro_rules! impl_err {
             }
         }
     };
-    ( $s:ty, $($p:path, $e:expr),* ) => {
+    ($s:ty, $($p:path, $e:expr),*) => {
         impl Error for $s {}
         impl Display for $s {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

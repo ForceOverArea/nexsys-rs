@@ -19,8 +19,14 @@ use algos::Variable;
 use solver::Nexsys;
 use parsing::*;
 
+/// Shorthand for the contents of a Nexsys Solution: a
+/// `HashMap<String, Variable>` of variable values in the 
+/// solution as well as a `Vec<String>` of the steps taken
+/// to obtain the solution.
 type SolverOutput = (HashMap<String, Variable>, Vec<String>);
 
+/// Evaluates a string of nexsys-legal code and returns the 
+/// solution to the system as well as the steps taken to obtain it.
 pub fn solve(
     system: &str, 
     mut tolerance: Option<f64>, 

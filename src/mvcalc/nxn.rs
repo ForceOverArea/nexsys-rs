@@ -4,7 +4,7 @@ use crate::{
     errors::{NxNInversionError, NxNCreationError}
 };
 
-/// An n x n matrix with a given `size` n and a `Vec` containing the variables in each column if applicable.
+/// An n x n matrix with a `Vec` containing the variables in each column if they are given.
 #[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -161,6 +161,7 @@ impl NxN {
         res
     }
 
+    /// Inversion method for 2x2 matrices
     fn invert_2x2(&mut self) -> Result<(), Box<dyn Error>> {
         
         let m = &self.mat;
@@ -190,6 +191,7 @@ impl NxN {
         Ok(())    
     }
 
+    /// Inversion method for 3x3 matrices
     fn invert_3x3(&mut self) -> Result<(), Box<dyn Error>> {
 
         let m = &self.mat;
@@ -230,6 +232,7 @@ impl NxN {
         Ok(())
     }
 
+    /// Inversion method for 4x4 matrices
     fn invert_4x4(&mut self) -> Result<(), Box<dyn Error>> {
         let m = &self.mat;
         
@@ -290,6 +293,7 @@ impl NxN {
         Ok(())
     }
 
+    /// Inversion method for nxn matrices where n > 4
     fn invert_nxn(&mut self) -> Result<(), Box<dyn Error>> {
         let n = self.size;
         let mut inv = NxN::identity(n);

@@ -4,6 +4,7 @@ use crate::{cleanup, errors::ConditionFormatError};
 use lazy_static::lazy_static;
 use regex::Regex;
 
+/// Evaluates if the first expression contains any of the later expressions
 macro_rules! contains_any {
     ($s:expr, $ch1:expr, $( $ch:tt ),* ) => {{
         $s.contains($ch1) $( || $s.contains($ch) )*
@@ -136,9 +137,11 @@ pub fn conditionals(text: &str) -> Result<String, Box<dyn Error>> {
     Ok(output)
 }
 
+/// Testing for non-public macros
 #[cfg(test)]
 mod test {
 
+    /// Tests the `contains_any!` macro
     #[test]
     fn test_contains_any_macro() {
         assert_eq!(
@@ -156,6 +159,8 @@ mod test {
             true
         );
     } 
+    
+    /// Additional testing for how the `contains_any!` macro works
     #[test]
     fn buggy_case() {
         if !(contains_any!("if(a<b,b-a-(1),if(a==b,b-(a),a-b-(1)))", "==", "<=", ">=", "<", ">", "!=")) {
