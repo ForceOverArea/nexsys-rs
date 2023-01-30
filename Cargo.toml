@@ -22,7 +22,6 @@ path = "tests/parsers.rs"
 
 [features]
 python_ffi = ["pyo3"]
-default = ["python_ffi"]
 
 [[bin]]
 name = "nxc"

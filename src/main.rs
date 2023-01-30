@@ -40,7 +40,7 @@ OPTIONS:
         if args[i] == *"--tolerance" || args[i] == *"-tol" {
             match args[i+1].parse::<f64>() {
                 Ok(o) => {
-                    println!("[nxc].....tolerance set to {}", o);
+                    println!("[nxc].....tolerance set to {o}");
                     tolerance = Some(o);
                 },
                 Err(_) => {
@@ -52,7 +52,7 @@ OPTIONS:
         if args[i] == *"--max-iterations" || args[i] == *"-max" {
             match args[i+1].parse::<usize>() {
                 Ok(o) => {
-                    println!("[nxc].....iteration limit set to: {}", o);
+                    println!("[nxc].....iteration limit set to: {o}");
                     max_iterations = Some(o);
                 },
                 Err(_) => {
@@ -72,7 +72,7 @@ OPTIONS:
             preprocess = consts(&preprocess).unwrap();
             preprocess = conditionals(&preprocess).unwrap();
             
-            println!("\n{}\n", preprocess);
+            println!("\n{preprocess}\n");
         }
         if args[i] == *"--to-file" || args[i] == *"-o" {
             println!("[nxc].....Writing to file...");
@@ -84,7 +84,7 @@ OPTIONS:
         Ok(o) => o,
         Err(e) => {
             println!("[nxc].....ERR: nxc could not solve the system");
-            println!("[nxc].....{}", e);
+            println!("[nxc].....{e}");
             process::exit(1);
         }
     };
@@ -105,7 +105,7 @@ OPTIONS:
             }
         }
     } else {
-        println!("{}", output);
+        println!("{output}");
         process::exit(0);
     }
 }

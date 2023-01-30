@@ -1,4 +1,4 @@
-use nexsys::{cleanup, parsing::{conditionals, conversions}, units::unit_data};
+use nexsys::{parsing::{conditionals, conversions}, units::unit_data};
 
 #[test]
 fn test_conditional_parser() {
@@ -10,7 +10,7 @@ fn test_conditional_parser() {
         a - b
     }"#;
 
-    let res = cleanup!(conditionals(my_code).unwrap(), "\n", " ");
+    let res = conditionals(my_code).unwrap().replace(['\n', ' '], "");
     assert_eq!("if(a,4.0,b,b-a,a-b)=0", res);
 }
 
@@ -25,7 +25,7 @@ fn test_comparison_op_parser() {
         a - b
     }"#;
 
-    let res = cleanup!(conditionals(my_code).unwrap(), "\n", " ");
+    let res = conditionals(my_code).unwrap().replace(['\n', ' '], "");
     assert_eq!("if(a,4.0,b,b-a,a-b)=0", res);
 }
 
@@ -42,7 +42,7 @@ fn test_nested_conditional_formatting() {
         }
     }"#;
 
-    let res = cleanup!(conditionals(my_code).unwrap(), "\n", " ");
+    let res = conditionals(my_code).unwrap().replace(['\n', ' '], "");
     assert_eq!("if(a,4.0,b,b-a-(1),if(a,1.0,b,b-(a),a-b-(1)))=0", res);
 }
 

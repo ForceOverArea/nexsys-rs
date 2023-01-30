@@ -191,7 +191,7 @@ pub fn mv_newton_raphson<'a>( system: Vec<&'a str>, mut guess: HashMap<&'a str, 
         if e < tolerance { // Solution is valid and acceptable
             return Ok(Solution::Converged(guess))
         } else if count > max_iterations { // Solution is valid, but timed out. Add a warning
-            println!("count: {}\nerror{}", count, e);
+            println!("count: {count}\nerror{e}");
             return Ok(Solution::NonConverged(guess))
         } 
         count += 1;

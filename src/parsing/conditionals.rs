@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use crate::{cleanup, errors::ConditionFormatError};
+use crate::errors::ConditionFormatError;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -52,10 +52,10 @@ pub (in crate) fn conditional(st: &[f64]) -> f64 {
 /// This function returns an `Err` if an invalid conditional operator is found in `cndl`.
 pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error>> {
 
-    let mut args = cleanup!(cndl.to_string()," ","\n")  // strip whitespace
+    let mut args = cndl.replace([' ', '\n'], " ") // strip whitespace
     .replace("if[", "if(")  // make start of function call
     .replace("]{", ",")     // delimit arguments
-    .replace("}else{", ",") // "
+    .replace("}else{", ",") // (ditto)
     .replace('}', ")");     // close function call
 
     //if(a<b,a-b=1,b-a=1)

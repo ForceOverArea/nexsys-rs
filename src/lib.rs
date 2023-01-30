@@ -38,7 +38,8 @@ pub fn solve(
     if max_iterations   .is_none() { max_iterations = Some(300); }
 
     // let includes = includes(system);     // NOTE: Includes are pending implementation on account of "I think they're shitty and also bad".
-    let mut preprocess  = conversions(system)?;
+    let mut preprocess = comments(system);  // Same process as before, just remove comments (/* */) first.
+    preprocess = conversions(&preprocess)?;
     preprocess = consts(&preprocess)?;
     preprocess = conditionals(&preprocess)?;
 

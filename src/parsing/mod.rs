@@ -118,9 +118,9 @@ pub fn imports(text: &str, tolerance: Option<f64>, max_iterations: Option<usize>
 
         let raw_stmnt: Vec<&str> = stmnt.as_str().split(']').collect();
 
-        let contents = read_to_string( cleanup!(raw_stmnt[0].to_string(), "[") ).expect("failed to locate file");
+        let contents = read_to_string( raw_stmnt[0].replace('[', "") ).expect("failed to locate file");
         
-        let clean_vars = cleanup!(raw_stmnt[1].to_string(), "->", " ");
+        let clean_vars = cleanup!(raw_stmnt[1].to_string(), "->", ' ');
         let vars: Vec<&str> = clean_vars.split(',').collect();
 
         let soln = solve(&contents, tolerance, max_iterations, allow_nonconvergence)
@@ -134,17 +134,31 @@ pub fn imports(text: &str, tolerance: Option<f64>, max_iterations: Option<usize>
 }
 
 /// Identifies and replaces include statements with external code
-pub fn includes(text: &str) -> String {
+fn _includes(text: &str) -> String {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"(?i)#include \[[a-z_\.-]+\]").unwrap();
     } 
     let mut output = text.to_string();
 
     for f in RE.find_iter(text).map(|i| i.as_str()) {
-        let fp = cleanup!(f.to_string(), "#include [", "]");
+        let fp = cleanup!(f.to_string(), "#include [", ']');
         let code = read_to_string(fp).expect("failed to read file in #include statement");
         output = output.replace(f, code.as_str());
     }
+    output
+}
+
+/// Identifies and removes comments found in a Nexsys-legal string.
+pub fn comments(text: &str) -> String {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r#"(?i)".*?""#).unwrap();
+    }
+    let mut output = text.to_string();
+
+    for f in RE.find_iter(text).map(|i| i.as_str()) {
+        output = output.replace(f, "");
+    }
+
     output
 }
 
@@ -160,7 +174,7 @@ pub fn conversions(text: &str) -> Result<String, Box<dyn Error>> {
 
     for m in res {
 
-        let pre = cleanup!(m.to_string(), "[", "]");
+        let pre = m.replace(['[', ']'], "");
         
         let args: Vec<&str> = pre.split("->").collect();
         

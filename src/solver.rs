@@ -1,5 +1,5 @@
 use std::{collections::HashMap, error::Error};
-use crate::{algos::*, cleanup, parsing::legal_variable, errors::SolverConvergenceError, SolverOutput};
+use crate::{algos::*, parsing::legal_variable, errors::SolverConvergenceError, SolverOutput};
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -146,12 +146,12 @@ impl Nexsys {
             match ans {
                 Solution::Converged(o) => {
                     self.solution.insert(o.0.to_string(), o.1);
-                    self.log.push(format!("solved {} for variable {}", cleanup!(eqn.as_text(), "\r"), target));
+                    self.log.push(format!("solved {} for variable {}", eqn.as_text().replace('\r', ""), target));
                 },
                 Solution::NonConverged(e) => {
                     if self.allow_nonconvergence {
                         self.solution.insert(e.0.to_string(), e.1);
-                        self.log.push(format!("timeout while solving {} for variable {}", cleanup!(eqn.as_text(), "\r"), target));
+                        self.log.push(format!("timeout while solving {} for variable {}", eqn.as_text().replace('\r', ""), target));
                     } else {
                         return Err(Box::new(SolverConvergenceError))
                     }
@@ -223,7 +223,7 @@ impl Nexsys {
             
             match ans {
                 Solution::Converged(s) => {
-                    self.log.push(cleanup!(msg, "[", "]", r#"""#, "\r")); // Add solver report to log
+                    self.log.push(msg.replace(['[', ']', '"', '\r'], "")); // Add solver report to log
                     
                     self.solution.extend(s.into_iter().map(
                         |i| (i.0.to_string(), i.1)
@@ -231,7 +231,7 @@ impl Nexsys {
                 },
                 Solution::NonConverged(s) => {
                     if self.allow_nonconvergence {
-                        self.log.push(cleanup!(err_msg, "[", "]", r#"""#, "\r")); // Add solver report to log
+                        self.log.push(err_msg.replace(['[', ']', '"', '\r'], "")); // Add solver report to log
                         
                         self.solution.extend(s.into_iter().map(
                             |i| (i.0.to_string(), i.1)
