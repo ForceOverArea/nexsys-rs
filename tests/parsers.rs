@@ -3,47 +3,58 @@ use nexsys::{parsing::{conditionals, conversions}, units::unit_data};
 #[test]
 fn test_conditional_parser() {
 
-    let my_code = r#"
-    if[a < b] {
-        b - a
-    } else {
-        a - b
-    }"#;
+    let my_code = 
+r#"
+If you see this in the output you're in it deep
+    if a < b:
+    b - a
+else:
+    a - b
+end"#;
 
-    let res = conditionals(my_code).unwrap().replace(['\n', ' '], "");
-    assert_eq!("if(a,4.0,b,b-a,a-b)=0", res);
+    let res = conditionals(my_code).unwrap();
+    println!("{res}");
+    assert!(res.contains("if(a,4.0,b,b-a,a-b) = 0"));
 }
 
-#[should_panic]
 #[test]
 fn test_comparison_op_parser() {
 
-    let my_code = r#"
-    if[a =< b] {
-        b - a
-    } else {
-        a - b
-    }"#;
+    let my_code = 
+r#"
+If you see this in the output you're in it deep
+    if a =< b:
+    b - a = 0
+else:
+    a - b = 0
+end"#;
 
-    let res = conditionals(my_code).unwrap().replace(['\n', ' '], "");
-    assert_eq!("if(a,4.0,b,b-a,a-b)=0", res);
+    match conditionals(my_code){
+        Err(e) => assert!(e.to_string() == "invalid comparison operator. valid operators are: <, >, <=, >=, ==, !="),
+        _ => panic!()
+    }
 }
 
 #[test]
 fn test_nested_conditional_formatting() {
-    let my_code = r#"
-    if[a < b] {
-        b - a = 1
-    } else {
-        if [a == b] {
-            b = a
-        } else {
-            a - b = 1
-        }
-    }"#;
+    let my_code = 
+r#"
+If you see this in the output you're in it deep
 
-    let res = conditionals(my_code).unwrap().replace(['\n', ' '], "");
-    assert_eq!("if(a,4.0,b,b-a-(1),if(a,1.0,b,b-(a),a-b-(1)))=0", res);
+if a < b:
+    b - a = 1
+else:
+    if a == b:
+        b = a
+    else:
+        a - b = 1
+    end
+end
+"#;
+
+    let res = conditionals(my_code).unwrap();
+    println!("{res}");
+    assert!(res.contains("if(a,4.0,b,b-a-(1),if(a,1.0,b,b-(a),a-b-(1))) = 0"));
 }
 
 #[test]
@@ -57,13 +68,13 @@ fn test_conversion_parser() {
 #[test]
 fn test_unit_data() {
 
-    let ud = unit_data();
-    println!("{}",ud["VELOCITY"]["in/s"]);
-    println!("{}",ud["VELOCITY"]["cm/s"]);
-    println!("{}",ud["VOLUME"]["m^3"]);
-    println!("{}",ud["PRESSURE"]["N/m^2"]);
-    println!("{}",ud["AREA"]["in^2"]);
-    println!("{}",ud["VOLUMETRIC FLOW"]["m^3/s"]);
-    println!("{}",ud["VOLUMETRIC FLOW"]["gpm"]);
-    println!("{}",ud["VELOCITY"]["mph"]);
+    let _ud = unit_data();
+    // println!("{}",_ud["VELOCITY"]["in/s"]);
+    // println!("{}",_ud["VELOCITY"]["cm/s"]);
+    // println!("{}",_ud["VOLUME"]["m^3"]);
+    // println!("{}",_ud["PRESSURE"]["N/m^2"]);
+    // println!("{}",_ud["AREA"]["in^2"]);
+    // println!("{}",_ud["VOLUMETRIC FLOW"]["m^3/s"]);
+    // println!("{}",_ud["VOLUMETRIC FLOW"]["gpm"]);
+    // println!("{}",_ud["VELOCITY"]["mph"]);
 }

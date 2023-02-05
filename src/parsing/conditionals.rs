@@ -52,11 +52,11 @@ pub (in crate) fn conditional(st: &[f64]) -> f64 {
 /// This function returns an `Err` if an invalid conditional operator is found in `cndl`.
 pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error>> {
 
-    let mut args = cndl.replace([' ', '\n'], " ") // strip whitespace
-    .replace("if[", "if(")  // make start of function call
-    .replace("]{", ",")     // delimit arguments
-    .replace("}else{", ",") // (ditto)
-    .replace('}', ")");     // close function call
+    let mut args = cndl.replace("if ",  "if(")  // make start of function call
+    .replace([' ', '\n'], "")   // strip whitespace
+    .replace(':',   ",")        // delimit arguments
+    .replace("else", "")        // (ditto)
+    .replace("end", ")");       // close function call
 
     //if(a<b,a-b=1,b-a=1)
     // println!("SUBBED TOKENS: {}", args);
@@ -98,42 +98,54 @@ pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error
 /// Identifies and returns conditional statements found in a Nexsys-legal string.
 pub fn conditionals(text: &str) -> Result<String, Box<dyn Error>> {
     lazy_static!{
-        static ref RE: Regex = Regex::new(r"(?si)if ?\[ ?.* ?[<>=]+ ?.* ?\] ?\{.*\} ?else ?\{.*\}").unwrap();
-        static ref CHK: Regex = Regex::new(r"").unwrap();
+        static ref RE: Regex = Regex::new(            
+r#"(?m)^[ \t]*if [^<>=]+[<>=]{1,2}[^<>=]+:$
+^.*$
+^[ \t]*else:$
+^.*$
+^[ \t]*end"#
+        ).unwrap();
     }
     let mut output = text.to_string();
-    let cdls: Vec<&str> = RE.find_iter(text).map(|i| i.as_str()).collect();
+    
+    loop {
+        let tmp = output.to_string(); //FIXME: this looks stupid. Is there a better way to do it?
+        let cdls: Vec<&str> = RE.find_iter(&tmp).map(|i| i.as_str()).collect();
 
-    for raw in cdls {
-
-        // format equations contained in the conditional via .map(), then pass to format_conditional()
-        let fmt_eqns = raw.split('\n').map(|line| {
-            
-            if line.contains('=') && !(contains_any!(line, "[", "]", "<", ">")) {
-                
-                let terms = line.split('=').collect::<Vec<&str>>();
-                
-                format!("{} - ({})", terms[0], terms[1])
-            
-            } else {
-                
-                line.to_string()
-            
+        // println!("{cdls:#?}");
+    
+        for raw in &cdls {
+    
+            let mut rows = raw
+                .split('\n')
+                .map(|i| i.to_string())
+                .collect::<Vec<String>>();
+    
+            // println!("{rows:#?}");
+    
+            for r in [1,3] {
+                if rows[r].contains('=') {
+                    let terms = rows[r].split('=').collect::<Vec<&str>>();
+                    if terms[1].replace(' ',"") == 0.to_string() {
+                        rows[r] = terms[0].to_string();
+                    } else {
+                        rows[r] = format!("{} - ({})", terms[0], terms[1]);
+                    }
+                }
             }
+            
+            let fmt_eqns = rows.join("\n");
+    
+            // println!("{}", fmt_eqns);
+    
+            let fmtd = &format_conditional(&fmt_eqns)?;
+    
+            output = output.replace(raw, fmtd);
+        }
 
-        }).collect::<Vec<String>>().join("\n");
-
-        // println!("{}", fmt_eqns);
-
-        let fmtd = &format_conditional(&fmt_eqns)?;
-
-        // if !CHK.is_match(fmtd) { // todo: make an error return if the formatted conditional statement is erroneous
-        //     return Err(Box::new(ConditionFormatError::ConditionalSyntax))
-        // }
-
-        output = output.replace(raw, fmtd);
+        if cdls.is_empty() { break } // keep going until there are no if statement matches left
     }
-
+    
     Ok(output)
 }
 

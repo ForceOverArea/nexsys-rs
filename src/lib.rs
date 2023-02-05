@@ -14,10 +14,14 @@ pub mod errors;
 #[cfg(feature = "python_ffi")]
 mod python_ffi;
 
+/// Not useful in Rust, but provides C/C++ access to the Nexsy equation solving engine.
+#[cfg(feature = "c_ffi")]
+mod c_ffi;
+
 use std::{collections::HashMap, error::Error};
 use algos::Variable;
 use solver::Nexsys;
-use parsing::*;
+use parsing::{compile, domains, guess_values};
 
 /// Shorthand for the contents of a Nexsys Solution: a
 /// `HashMap<String, Variable>` of variable values in the 
@@ -37,14 +41,8 @@ pub fn solve(
     if tolerance        .is_none() { tolerance = Some(1E-10); }
     if max_iterations   .is_none() { max_iterations = Some(300); }
 
-    // let includes = includes(system);     // NOTE: Includes are pending implementation on account of "I think they're shitty and also bad".
-    let mut preprocess = comments(system);  // Same process as before, just remove comments (/* */) first.
-    preprocess = conversions(&preprocess)?;
-    preprocess = consts(&preprocess)?;
-    preprocess = conditionals(&preprocess)?;
-
     let mut sys = Nexsys::new(
-        preprocess.as_str(), 
+        compile(system)?.as_str(), 
         tolerance.unwrap(), 
         max_iterations.unwrap(),
         allow_nonconvergence
@@ -52,7 +50,6 @@ pub fn solve(
     
     sys.mass_add_domains(domains(system));
     sys.mass_add_guess(guess_values(system));
-    sys.mass_add_edits(imports(system, tolerance, max_iterations, allow_nonconvergence));
 
     sys.solve()
 }

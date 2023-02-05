@@ -104,6 +104,7 @@ dependencies = [
 name = "nexsys"
 version = "0.0.2"
 dependencies = [
+ "fnv",
  "lazy_static",
  "meval",
  "pyo3",

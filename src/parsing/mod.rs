@@ -107,7 +107,7 @@ pub fn domains(text: &str) -> HashMap<String, [f64; 2]> {
 }
 
 /// Identifies and returns imports found in a Nexsys-legal string.
-pub fn imports(text: &str, tolerance: Option<f64>, max_iterations: Option<usize>, allow_nonconvergence: bool) -> HashMap<String, Variable> {
+fn _imports(text: &str, tolerance: Option<f64>, max_iterations: Option<usize>, allow_nonconvergence: bool) -> HashMap<String, Variable> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"(?i)use [[a-z_\.-]+] ?-> ?.*").unwrap();
     }
@@ -203,4 +203,18 @@ pub fn consts(text: &str) -> Result<String, Box<dyn Error>> {
         }
     }
     Ok(output)
+}
+
+/// Wraps most functions in `nexsys::parsing`, returning either an error that 
+/// prevents the code from being solvable or the intermediate language representation
+/// of the `.nxs`-formatted code
+pub fn compile(code: &str) -> Result<String, Box<dyn Error>> {
+    
+    let mut nil = comments(code); 
+    
+    nil = conversions(&nil)?;
+    
+    nil = consts(&nil)?;
+    
+    conditionals(&nil)
 }
