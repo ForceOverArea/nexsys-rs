@@ -1,4 +1,5 @@
 mod conditionals;
+mod duplicate;
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -7,6 +8,7 @@ use std::fs::read_to_string;
 use crate::{solve, Variable, units::{convert, const_data}, errors::ConstFormatError};
 
 pub use conditionals::*;
+pub use duplicate::*;
 
 /// Removes a list of characters from a given `String`.
 /// 
@@ -35,7 +37,7 @@ macro_rules! cleanup {
 /// Identifies and returns variables found in a Nexsys-legal string.
 pub fn legal_variable(text: &str) -> Vec<String> {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"(?i)[a-z](?:[a-z0-9_]+)?").unwrap();
+        static ref RE: Regex = Regex::new(r"(?i)[a-z][a-z0-9_]*").unwrap();
     }
     let raw = RE.find_iter(text).map(|i| i.as_str()).collect::<Vec<&str>>();
     let mut res = vec![];
