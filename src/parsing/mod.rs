@@ -1,11 +1,11 @@
 mod conditionals;
 mod duplicate;
 
+use geqslib::shunting::ContextHashMap;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::{collections::HashMap, error::Error};
-use std::fs::read_to_string;
-use crate::{solve, Variable, units::{convert, const_data}, errors::ConstFormatError};
+use crate::{units::{convert, const_data}, errors::ConstFormatError};
 
 pub use conditionals::*;
 pub use duplicate::*;
@@ -34,130 +34,63 @@ macro_rules! cleanup {
     }};
 }
 
-/// Identifies and returns variables found in a Nexsys-legal string.
-pub fn legal_variable(text: &str) -> Vec<String> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"(?i)[a-z][a-z0-9_]*").unwrap();
-    }
-    let raw = RE.find_iter(text).map(|i| i.as_str()).collect::<Vec<&str>>();
-    let mut res = vec![];
-
-    for i in raw {
-        let var = i.to_string();
-        if !res.contains(&var) {
-            res.push(var)
-        }
-    }
-    res
-}
-
 /// Identifies and returns guess values found in a Nexsys-legal string.
-pub fn guess_values(text: &str) -> HashMap<String, f64> {
-    lazy_static!{
-        static ref RE: Regex = Regex::new(r"(?i)guess -?[0-9]+ for [a-z](?:[a-z0-9_]+)?").unwrap();
+pub fn guess_values(text: &str) -> (String, HashMap<String, f64>)
+{
+    lazy_static!
+    {
+        static ref RE: Regex = Regex::new(r"(?i)guess (-?[0-9]+\.?[0-9]*) for ([a-z][a-z0-9_]*)").unwrap();
     }
-    let mut res = HashMap::new();
-    let guesses = RE.find_iter(text)
-        .map(
-            |i| {
-                i.as_str().split(' ').collect::<Vec<&str>>()
-            }
-        ).collect::<Vec<Vec<&str>>>();
+    let mut res = (text.to_owned(), HashMap::new());
+    let guesses = RE.captures_iter(text);
 
-    for g in guesses {
-        res.insert(g[3].to_string(), g[1].parse().unwrap());
+    for g in guesses 
+    {
+        res.0 = res.0.replace(g.get(0).unwrap().as_str(), "");
+        res.1.insert(
+            g.get(1).unwrap().as_str().to_owned(), 
+            g.get(2).unwrap().as_str().parse()
+                .expect("failed to parse number in guess declaration")
+        );
     }
     res
 }
 
 /// Identifies and returns domains found in a Nexsys-legal string.
-pub fn domains(text: &str) -> HashMap<String, [f64; 2]> {
-    lazy_static!{
-        static ref RE: Regex = Regex::new(r"(?i)keep [a-z](?:[a-z0-9_]+)? on \[-?[0-9.]+, ?-?[0-9.]+\]").unwrap();
+pub fn domains(text: &str) -> (String, HashMap<String, [f64; 2]>)
+{
+    lazy_static!
+    {
+        static ref RE: Regex = Regex::new(r"(?i)keep ([a-z][a-z0-9_]*) on \[(-? ?[0-9]+\.?[0-9]*), ?(-? ?[0-9]+\.?[0-9]*)\]").unwrap();
     }
-    let mut res = HashMap::new();
-    let domains = RE.find_iter(text)
-        .map(
-            |i| {
-                i.as_str().split(' ').collect::<Vec<&str>>()
-            }
-        ).collect::<Vec<Vec<&str>>>();
+    let mut res = (text.to_owned(), HashMap::new());
+    let domains = RE.captures_iter(text);
 
-    for d in domains {
-        let terms = d;
-        let v = terms[1].to_string();
-        // println!("Found bounded variable: {}",v);
-
-        let bound_string: String;
-        if terms.len() == 4 {
-            bound_string = terms[3].to_string();
-        } else if terms.len() == 5 {
-            bound_string = [terms[3], terms[4]].join(" ");
-        } else {
-            panic!("expected 4 or 5 terms in domain specification, found {}", terms.len())
-        }
-       
-        let bounds = bound_string
-        .replace(['[', ']'], "")
-        .split(", ")
-        .map(|i| i.parse().unwrap())
-        .collect::<Vec<f64>>();
-
-        res.insert(v, [bounds[0], bounds[1]]);
+    for d in domains 
+    {
+        res.0.replace(d.get(0).unwrap().as_str(), "");
+        res.1.insert(
+            d.get(1).unwrap().as_str().to_owned(),
+            [d.get(2).unwrap().as_str().parse()
+                .expect("failed to parse number in domain declaration"),
+            d.get(3).unwrap().as_str().parse()
+                .expect("failed to parse number in domain declaration")]
+        );
     }
     res
 }
 
-/// Identifies and returns imports found in a Nexsys-legal string.
-fn _imports(text: &str, tolerance: Option<f64>, max_iterations: Option<usize>, allow_nonconvergence: bool) -> HashMap<String, Variable> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"(?i)use [[a-z_\.-]+] ?-> ?.*").unwrap();
-    }
-    let statements = RE.find_iter(text);
-    let mut imports = HashMap::new();
-
-    for stmnt in statements {
-
-        let raw_stmnt: Vec<&str> = stmnt.as_str().split(']').collect();
-
-        let contents = read_to_string( raw_stmnt[0].replace('[', "") ).expect("failed to locate file");
-        
-        let clean_vars = cleanup!(raw_stmnt[1].to_string(), "->", ' ');
-        let vars: Vec<&str> = clean_vars.split(',').collect();
-
-        let soln = solve(&contents, tolerance, max_iterations, allow_nonconvergence)
-        .expect("failed to solve imported system").0
-        .into_iter()
-        .filter(move |i| vars.contains(&i.0.as_str()));
-
-        imports.extend(soln);
-    }
-    imports
-}
-
-/// Identifies and replaces include statements with external code
-fn _includes(text: &str) -> String {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"(?i)#include \[[a-z_\.-]+\]").unwrap();
-    } 
-    let mut output = text.to_string();
-
-    for f in RE.find_iter(text).map(|i| i.as_str()) {
-        let fp = cleanup!(f.to_string(), "#include [", ']');
-        let code = read_to_string(fp).expect("failed to read file in #include statement");
-        output = output.replace(f, code.as_str());
-    }
-    output
-}
-
 /// Identifies and removes comments found in a Nexsys-legal string.
-pub fn comments(text: &str) -> String {
-    lazy_static! {
+pub fn comments(text: &str) -> String 
+{
+    lazy_static! 
+    {
         static ref RE: Regex = Regex::new(r#"(?i)".*?""#).unwrap();
     }
     let mut output = text.to_string();
 
-    for f in RE.find_iter(text).map(|i| i.as_str()) {
+    for f in RE.find_iter(text).map(|i| i.as_str()) 
+    {
         output = output.replace(f, "");
     }
 
@@ -166,7 +99,8 @@ pub fn comments(text: &str) -> String {
 
 /// Identifies and replaces any unit conversion tokens in a Nexsys-legal string.
 pub fn conversions(text: &str) -> Result<String, Box<dyn Error>> {
-    lazy_static! {
+    lazy_static! 
+    {
         static ref RE: Regex = Regex::new(r"(?i)\[[a-z0-9_^/-]+->[a-z0-9_^/-]+\]").unwrap();
     }
 
@@ -174,8 +108,8 @@ pub fn conversions(text: &str) -> Result<String, Box<dyn Error>> {
 
     let res: Vec<&str> = RE.find_iter(text).map(|i| i.as_str()).collect();
 
-    for m in res {
-
+    for m in res 
+    {
         let pre = m.replace(['[', ']'], "");
         
         let args: Vec<&str> = pre.split("->").collect();
@@ -189,18 +123,24 @@ pub fn conversions(text: &str) -> Result<String, Box<dyn Error>> {
 }
 
 /// Identifies and replaces any constants in a Nexsys-legal string.
-pub fn consts(text: &str) -> Result<String, Box<dyn Error>> {
-    lazy_static! {
+pub fn consts(text: &str) -> Result<String, Box<dyn Error>> 
+{
+    lazy_static! 
+    {
         static ref RE: Regex = Regex::new(r"(?i)#[a-z_]+").unwrap();
         static ref CONSTS: HashMap<String, f64> = const_data();
     }
 
     let mut output = text.to_string();
 
-    for m in RE.find_iter(text).map(|i| i.as_str()) {
-        if let Some(c) = CONSTS.get(&m.to_string()) {
+    for m in RE.find_iter(text).map(|i| i.as_str()) 
+    {
+        if let Some(c) = CONSTS.get(&m.to_string()) 
+        {
             output = output.replace(m, &c.to_string());
-        } else {
+        } 
+        else 
+        {
             return Err(Box::new(ConstFormatError))
         }
     }
@@ -210,13 +150,44 @@ pub fn consts(text: &str) -> Result<String, Box<dyn Error>> {
 /// Wraps most functions in `nexsys::parsing`, returning either an error that 
 /// prevents the code from being solvable or the intermediate language representation
 /// of the `.nxs`-formatted code
-pub fn compile(code: &str) -> Result<String, Box<dyn Error>> {
+pub fn compile(code: &str, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>) -> Result<String, Box<dyn Error>> {
+    
+    let sys_domains: HashMap<String, [f64; 2]>;
+    let sys_guesses: HashMap<String, f64>;
     
     let mut nil = comments(code); 
-    
-    nil = conversions(&nil)?;
-    
+    (nil, sys_domains) = domains(&nil);
+    for (var, bounds) in sys_domains
+    {
+        if let Some(var_info) = declared.get_mut(&var)
+        {
+            var_info[1] = bounds[0];
+            var_info[2] = bounds[1];
+        }
+        else 
+        {
+            declared.insert(var, [1.0, bounds[0], bounds[1]]);
+        }
+    }
+
+    (nil, sys_guesses) = guess_values(&nil);
+    for (var, guess) in sys_guesses
+    {
+        if let Some(var_info) = declared.get_mut(&var)
+        {
+            var_info[0] = guess;
+        }
+        else 
+        {
+            declared.insert(var, [guess, f64::NEG_INFINITY, f64::INFINITY]);
+        }
+    }
+
     nil = consts(&nil)?;
-    
-    conditionals(&nil)
+
+    nil = conversions(&nil)?;
+
+    nil = conditionals(&nil)?;
+
+    Ok(nil)
 }

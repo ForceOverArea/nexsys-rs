@@ -28,23 +28,14 @@ pub (in crate) fn conditional(st: &[f64]) -> f64 {
         }
     };
     
-    if op == 1.0 {          // eq
-        decision(a == b)
-
-    } else if op == 2.0 {   // le
-        decision(a <= b)
-
-    } else if op == 3.0 {   // ge
-        decision(a >= b)
-
-    } else if op == 4.0 {   // lt
-        decision(a < b)
-
-    } else if op == 5.0 {   // gt
-        decision(a > b)
-
-    } else {                // ne
-        decision(a != b)
+    match op.round() as usize
+    {          // eq
+        1 => decision(a == b),
+        2 => decision(a <= b),
+        3 => decision(a >= b),
+        4 => decision(a <  b),
+        5 => decision(a >  b),
+        _ => decision(a != b)
     }
 }
 
