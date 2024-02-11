@@ -1,55 +1,134 @@
-/// Provides implementations of single-variable and multivariate versions of Newton's method.
-pub mod algos;
-/// Provides code for math operations that are useful in multivariate calculus.
-pub mod mvcalc;
-/// Provides access to the Nexsys equation solver engine. Useful for solving equations in other code.
-pub mod solver;
 /// Provides data sets of common units and functions for converting between them.
 pub mod units;
 /// Provides tools for parsing text prior to passing to the equation solving engine.
 pub mod parsing;
 /// Different errors specific to Nexsys implementations of algorithms.
 pub mod errors;
-/// Not useful in Rust, but provides Python access to the Nexsys equation solving engine.
-#[cfg(feature = "python_ffi")]
-mod python_ffi;
 
-/// Not useful in Rust, but provides C/C++ access to the Nexsy equation solving engine.
-#[cfg(feature = "c_ffi")]
-mod c_ffi;
+use std::collections::HashMap;
 
-use std::{collections::HashMap, error::Error};
-use algos::Variable;
-use solver::Nexsys;
+pub use geqslib::*;
+pub use gmatlib::*;
 use parsing::{compile, domains, guess_values};
 
-/// Shorthand for the contents of a Nexsys Solution: a
-/// `HashMap<String, Variable>` of variable values in the 
-/// solution as well as a `Vec<String>` of the steps taken
-/// to obtain the solution.
-type SolverOutput = (HashMap<String, Variable>, Vec<String>);
+use crate::shunting::{ContextHashMap, ContextLike};
+use crate::system::{ConstrainResult, get_equation_unknowns, SystemBuilder};
 
-/// Evaluates a string of nexsys-legal code and returns the 
-/// solution to the system as well as the steps taken to obtain it.
-pub fn solve(
-    system: &str, 
-    mut tolerance: Option<f64>, 
-    mut max_iterations: Option<usize>, 
-    allow_nonconvergence: bool
-) -> Result<SolverOutput, Box<dyn Error>> {
+/// Solves a single equation for a single unknown value, returning a `bool` indicating if the solution attempt was successful 
+fn try_solve_single_unknown_eqn(eqn_pool: &mut Vec<String>, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, margin: f64, limit: usize) -> anyhow::Result<bool>
+{
+    for (i, equation) in eqn_pool.iter().enumerate()
+    {
+        let unknowns: Vec<&str> = get_equation_unknowns(&equation, ctx).collect();
+        if unknowns.len() != 1
+        {
+            return Ok(false);
+        }
 
-    if tolerance        .is_none() { tolerance = Some(1E-10); }
-    if max_iterations   .is_none() { max_iterations = Some(300); }
+        let var_info: [f64; 3];
+        if declared.contains_key(unknowns[0])
+        {
+            var_info = declared[unknowns[0]];
+        }
+        else
+        {
+            var_info = [1.0, f64::NEG_INFINITY, f64::INFINITY];
+        }
 
-    let mut sys = Nexsys::new(
-        compile(system)?.as_str(), 
-        tolerance.unwrap(), 
-        max_iterations.unwrap(),
-        allow_nonconvergence
-    );
-    
-    sys.mass_add_domains(domains(system));
-    sys.mass_add_guess(guess_values(system));
+        let soln = solve_equation_with_context(equation, ctx, var_info[0], var_info[1], var_info[2], margin, limit)?;
+        ctx.add_var_with_domain_to_ctx(&soln.0, soln.1, var_info[1], var_info[2]);
+        eqn_pool.remove(i);
+        return Ok(true);
+    }
+    Ok(false)
+}
 
-    sys.solve()
+fn try_solve_subsystem_of_equations(eqn_pool: &mut Vec<String>, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, margin: f64, limit: usize) -> anyhow::Result<bool>
+{
+    for equation in eqn_pool
+    {
+        let mut builder = SystemBuilder::new(equation, ctx.clone())?;
+        let mut sub_pool = eqn_pool.iter()
+            .filter(|&x| x != equation)
+            .map(|x| x.to_owned())
+            .collect::<Vec<String>>();
+        let mut still_learning = true;
+
+        while still_learning
+        {
+            // Build up a constrained system:
+            still_learning = false;
+            for (i, equation) in sub_pool.iter().enumerate()
+            {
+                match builder.try_constrain_with(equation)?
+                {
+                    ConstrainResult::WillConstrain => {
+                        sub_pool.remove(i);
+                        still_learning = true;
+                        break;
+                    },
+                    ConstrainResult::WillOverConstrain => break,
+                    _ => {}
+                }
+            }
+            
+            // Solve the found constrained system:
+            if let Some(mut system) = builder.build_system()
+            {
+                for (var, var_info) in declared
+                {
+                    system.specify_variable(var, var_info[0], var_info[1], var_info[2]);
+                }
+
+                let soln = system.solve(margin, limit)?;
+                for (var, val) in soln 
+                {
+                    ctx.add_var_to_ctx(&var, val);
+                }
+                eqn_pool.clear();
+                eqn_pool.extend(sub_pool.into_iter());
+
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
+/// Solves a system of equations in plain-text format.
+/// For more supported syntax, see `solve_with_preprocessors`
+/// 
+/// # Example
+/// ```
+/// ```
+pub fn basic_solve(system: &str, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, margin: f64, limit: usize) -> anyhow::Result<ContextHashMap>
+{
+    let mut eqn_pool = system.split('\n')
+        .filter(|x| x.contains('='))
+        .map(|x| x.to_owned())
+        .collect();
+
+    loop
+    {
+        // Get less expensive solutions:
+        if try_solve_single_unknown_eqn(&mut eqn_pool, ctx, declared, margin, limit)?
+        {
+            continue;
+        }
+
+        // Dig in and solve a more expensive subsystem:
+        else if try_solve_subsystem_of_equations(&mut eqn_pool, ctx, declared, margin, limit)?
+        {
+            continue;
+        }
+        
+        break;
+    }
+    Ok(ctx.clone())
+}
+
+/// Solves a system of equations with additional syntax used to indicate unit conversions, 
+pub fn solve_with_preprocessors(system: &str, margin: f64, limit: usize)
+{
+    todo!()
 }
