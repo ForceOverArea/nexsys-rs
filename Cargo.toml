@@ -21,7 +21,6 @@ name = "parsers"
 path = "tests/parsers.rs"
 
 [features]
-python_ffi = ["pyo3"]
 c_ffi = []
 # default = ["c_ffi"]
 
