@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use serde_json::{Value, from_str};
-use std::{collections::HashMap, error::Error};
+use std::collections::HashMap;
 
 use crate::errors::UnitConversionError;
 
@@ -117,7 +117,7 @@ pub fn unit_data() -> HashMap<String, HashMap<String, f64>> {
 }
 
 /// Returns a conversion factor between any unit in `unit_data()` for a given `fro` and `to` unit
-pub fn convert(fro: &str, to: &str) -> Result<f64, Box<dyn Error>> {
+pub fn convert(fro: &str, to: &str) -> anyhow::Result<f64> {
     lazy_static! { // Make it such that we don't need to generate this list more than once on runtime
         static ref UD: HashMap<String, HashMap<String, f64>> = unit_data();
     }
@@ -131,7 +131,7 @@ pub fn convert(fro: &str, to: &str) -> Result<f64, Box<dyn Error>> {
     }).collect();
 
     if cf.len() != 1 {
-        return Err(Box::new(UnitConversionError))
+        return Err(UnitConversionError.into())
     }
 
     Ok(cf[0])
