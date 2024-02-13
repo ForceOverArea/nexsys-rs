@@ -1,6 +1,4 @@
-use std::error::Error;
-
-use crate::errors::ConditionFormatError;
+use crate::{errors::ConditionFormatError, parsing::nexsys_regex};
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -11,37 +9,9 @@ macro_rules! contains_any {
     }};
 }
 
-/// The actual code that should be executed for evaluating an if statement via `meval`.
-/// This function panics if it doesn't receive exactly 5 arguments.
-pub (in crate) fn conditional(st: &[f64]) -> f64 {
-    // Panic if the formatting is incorrect. This should not happen if the 
-    // formatting code does its job properly.
-    assert!(st.len() == 5); 
-
-    let (a, op, b, res1, res2) = (st[0], st[1], st[2], st[3], st[4]);
-
-    let decision = move |p: bool| -> f64 {
-        if p {
-            res1
-        } else {
-            res2
-        }
-    };
-    
-    match op.round() as usize
-    {          // eq
-        1 => decision(a == b),
-        2 => decision(a <= b),
-        3 => decision(a >= b),
-        4 => decision(a <  b),
-        5 => decision(a >  b),
-        _ => decision(a != b)
-    }
-}
-
 /// Formats a "curly braces" `if` statement to a `conditional(...)` function call that will work in meval.
 /// This function returns an `Err` if an invalid conditional operator is found in `cndl`.
-pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error>> {
+pub (in crate) fn format_conditional(cndl: &str) -> anyhow::Result<String> {
 
     let mut args = cndl.replace("if ",  "if(")  // make start of function call
     .replace([' ', '\n'], "")   // strip whitespace
@@ -53,7 +23,7 @@ pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error
     // println!("SUBBED TOKENS: {}", args);
 
     if !(contains_any!(args, "==", "<=", ">=", "<", ">", "!=")) {
-        return Err(Box::new(ConditionFormatError::ConditionalSyntax))
+        return Err(ConditionFormatError::ConditionalSyntax.into())
     }
 
     // replace conditional sign with f64 code number
@@ -63,7 +33,7 @@ pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error
     if args.contains('<') {
 
         if args.contains("=<") {
-            return Err(Box::new(ConditionFormatError::Comparator))
+            return Err(ConditionFormatError::Comparator.into())
         }
 
         args = args.replace('<',  ",4.0,");
@@ -72,7 +42,7 @@ pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error
     if args.contains('>') {
         
         if args.contains("=>") {
-            return Err(Box::new(ConditionFormatError::Comparator))
+            return Err(ConditionFormatError::Comparator.into())
         }
 
         args = args.replace('>',  ",5.0,");
@@ -87,15 +57,15 @@ pub (in crate) fn format_conditional(cndl: &str) -> Result<String, Box<dyn Error
 }
 
 /// Identifies and returns conditional statements found in a Nexsys-legal string.
-pub fn conditionals(text: &str) -> Result<String, Box<dyn Error>> {
+pub fn conditionals(text: &str) -> anyhow::Result<String> {
     lazy_static!{
-        static ref RE: Regex = Regex::new(            
+        static ref RE: Regex = nexsys_regex(            
 r#"(?m)^[ \t]*if [^<>=]+[<>=]{1,2}[^<>=]+:$
 ^.*$
 ^[ \t]*else:$
 ^.*$
 ^[ \t]*end"#
-        ).unwrap();
+        );
     }
     let mut output = text.to_string();
     

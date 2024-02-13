@@ -7,9 +7,10 @@ pub mod errors;
 
 use std::collections::HashMap;
 
+use geqslib::shunting::new_context;
 pub use geqslib::*;
 pub use gmatlib::*;
-use parsing::{compile, domains, guess_values};
+use parsing::compile;
 
 use crate::shunting::{ContextHashMap, ContextLike};
 use crate::system::{ConstrainResult, get_equation_unknowns, SystemBuilder};
@@ -45,7 +46,7 @@ fn try_solve_single_unknown_eqn(eqn_pool: &mut Vec<String>, ctx: &mut ContextHas
 
 fn try_solve_subsystem_of_equations(eqn_pool: &mut Vec<String>, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, margin: f64, limit: usize) -> anyhow::Result<bool>
 {
-    for equation in eqn_pool
+    for equation in &*eqn_pool
     {
         let mut builder = SystemBuilder::new(equation, ctx.clone())?;
         let mut sub_pool = eqn_pool.iter()
@@ -71,25 +72,25 @@ fn try_solve_subsystem_of_equations(eqn_pool: &mut Vec<String>, ctx: &mut Contex
                     _ => {}
                 }
             }
+        }
             
-            // Solve the found constrained system:
-            if let Some(mut system) = builder.build_system()
+        // Solve the found constrained system:
+        if let Some(mut system) = builder.build_system()
+        {
+            for (var, var_info) in declared
             {
-                for (var, var_info) in declared
-                {
-                    system.specify_variable(var, var_info[0], var_info[1], var_info[2]);
-                }
-
-                let soln = system.solve(margin, limit)?;
-                for (var, val) in soln 
-                {
-                    ctx.add_var_to_ctx(&var, val);
-                }
-                eqn_pool.clear();
-                eqn_pool.extend(sub_pool.into_iter());
-
-                return Ok(true);
+                system.specify_variable(var, var_info[0], var_info[1], var_info[2]);
             }
+
+            let soln = system.solve(margin, limit)?;
+            for (var, val) in soln 
+            {
+                ctx.add_var_to_ctx(&var, val);
+            }
+            eqn_pool.clear();
+            eqn_pool.extend(sub_pool.into_iter());
+
+            return Ok(true);
         }
     }
     Ok(false)
@@ -128,7 +129,11 @@ pub fn basic_solve(system: &str, ctx: &mut ContextHashMap, declared: &mut HashMa
 }
 
 /// Solves a system of equations with additional syntax used to indicate unit conversions, 
-pub fn solve_with_preprocessors(system: &str, margin: f64, limit: usize)
+pub fn solve_with_preprocessors(system: &str, margin: f64, limit: usize) -> anyhow::Result<ContextHashMap>
 {
-    todo!()
+    let mut ctx = new_context(); 
+    let mut declared = HashMap::new();
+    let compiled = compile(system, &mut ctx, &mut declared)?;
+
+    basic_solve(&compiled, &mut ctx, &mut declared, margin, limit)
 }

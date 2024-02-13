@@ -1,37 +1,24 @@
 mod conditionals;
-mod duplicate;
+// mod duplicate; TODO: need to polish this up.
 
-use geqslib::shunting::ContextHashMap;
+use geqslib::shunting::{eval_str, ContextHashMap, ContextLike};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{collections::HashMap, error::Error};
+use std::collections::HashMap;
 use crate::{units::{convert, const_data}, errors::ConstFormatError};
 
 pub use conditionals::*;
-pub use duplicate::*;
 
-/// Removes a list of characters from a given `String`.
-/// 
-/// User be warned: under the hood this is done by 
-/// repeatedly calling `.replace()`, which might not be 
-/// desirable.
-/// # Example
-/// ```
-/// use nexsys::cleanup;
-/// 
-/// let mut my_string = "Hello,_World!".to_string();
-/// 
-/// my_string = cleanup!(my_string, "_", ",", "!");
-/// 
-/// assert_eq!("HelloWorld".to_string(), my_string)
-/// ```
-#[macro_export]
-macro_rules! cleanup {
-    ( $i:expr, $( $ch:tt ),* ) => {{
-        let mut out = $i;
-        $(out = out.replace($ch, "");)*
-        out
-    }};
+const LEGAL_VAR_PATTERN: &str = r"[a-z][a-z0-9_]*";
+const LEGAL_NUM_PATTERN: &str = r"-? ?[0-9]+\.?[0-9]*";
+
+/// Replaces `"@N"` and `"@V"` literals with the nexsys-legal number and variable patterns, respectively.
+fn nexsys_regex(pattern: &str) -> Regex
+{
+    Regex::new(&pattern
+        .replace("@N", LEGAL_NUM_PATTERN)
+        .replace("@V", LEGAL_VAR_PATTERN)
+    ).unwrap()
 }
 
 /// Identifies and returns guess values found in a Nexsys-legal string.
@@ -39,7 +26,7 @@ pub fn guess_values(text: &str) -> (String, HashMap<String, f64>)
 {
     lazy_static!
     {
-        static ref RE: Regex = Regex::new(r"(?i)guess (-?[0-9]+\.?[0-9]*) for ([a-z][a-z0-9_]*)").unwrap();
+        static ref RE: Regex = nexsys_regex(r"(?i)guess +(@N) +for +(@V)");
     }
     let mut res = (text.to_owned(), HashMap::new());
     let guesses = RE.captures_iter(text);
@@ -61,20 +48,20 @@ pub fn domains(text: &str) -> (String, HashMap<String, [f64; 2]>)
 {
     lazy_static!
     {
-        static ref RE: Regex = Regex::new(r"(?i)keep ([a-z][a-z0-9_]*) on \[(-? ?[0-9]+\.?[0-9]*), ?(-? ?[0-9]+\.?[0-9]*)\]").unwrap();
+        static ref RE: Regex = nexsys_regex(r"(?i)keep +(@V) +on +\[ *(@N), *(@N) *\]");
     }
     let mut res = (text.to_owned(), HashMap::new());
     let domains = RE.captures_iter(text);
 
     for d in domains 
     {
-        res.0.replace(d.get(0).unwrap().as_str(), "");
+        res.0 = res.0.replace(d.get(0).unwrap().as_str(), "");
         res.1.insert(
             d.get(1).unwrap().as_str().to_owned(),
             [d.get(2).unwrap().as_str().parse()
-                .expect("failed to parse number in domain declaration"),
+                .expect("failed to parse first number in domain declaration"),
             d.get(3).unwrap().as_str().parse()
-                .expect("failed to parse number in domain declaration")]
+                .expect("failed to parse second number in domain declaration")]
         );
     }
     res
@@ -85,7 +72,7 @@ pub fn comments(text: &str) -> String
 {
     lazy_static! 
     {
-        static ref RE: Regex = Regex::new(r#"(?i)".*?""#).unwrap();
+        static ref RE: Regex = nexsys_regex(r"//[^\n]*");
     }
     let mut output = text.to_string();
 
@@ -98,10 +85,10 @@ pub fn comments(text: &str) -> String
 }
 
 /// Identifies and replaces any unit conversion tokens in a Nexsys-legal string.
-pub fn conversions(text: &str) -> Result<String, Box<dyn Error>> {
+pub fn conversions(text: &str) -> anyhow::Result<String> {
     lazy_static! 
     {
-        static ref RE: Regex = Regex::new(r"(?i)\[[a-z0-9_^/-]+->[a-z0-9_^/-]+\]").unwrap();
+        static ref RE: Regex = nexsys_regex(r"(?i)\[[a-z0-9_^/-]+->[a-z0-9_^/-]+\]");
     }
 
     let mut output = text.to_string();
@@ -123,11 +110,11 @@ pub fn conversions(text: &str) -> Result<String, Box<dyn Error>> {
 }
 
 /// Identifies and replaces any constants in a Nexsys-legal string.
-pub fn consts(text: &str) -> Result<String, Box<dyn Error>> 
+pub fn consts(text: &str) -> anyhow::Result<String> 
 {
     lazy_static! 
     {
-        static ref RE: Regex = Regex::new(r"(?i)#[a-z_]+").unwrap();
+        static ref RE: Regex = nexsys_regex(r"(?i)#[a-z_]+");
         static ref CONSTS: HashMap<String, f64> = const_data();
     }
 
@@ -141,21 +128,59 @@ pub fn consts(text: &str) -> Result<String, Box<dyn Error>>
         } 
         else 
         {
-            return Err(Box::new(ConstFormatError))
+            return Err(ConstFormatError.into())
         }
     }
     Ok(output)
 }
 
+pub fn const_values(text: &str) -> anyhow::Result<(String, HashMap<String, f64>)>
+{
+    lazy_static!
+    {
+        static ref RE: Regex = nexsys_regex(r"(?i)const +(@V) *= *(@N)");
+    }
+    let mut res = (text.to_owned(), HashMap::new());
+    let const_vals = RE.captures_iter(text);
+
+    for c in const_vals
+    {
+        res.0 = res.0.replace(c.get(0).unwrap().as_str(), "");
+        res.1.insert(
+            c.get(1).unwrap().as_str().to_owned(), 
+            eval_str(c.get(2).unwrap().as_str())?
+        );
+    }
+    Ok(res)
+}
+
 /// Wraps most functions in `nexsys::parsing`, returning either an error that 
 /// prevents the code from being solvable or the intermediate language representation
-/// of the `.nxs`-formatted code
-pub fn compile(code: &str, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>) -> Result<String, Box<dyn Error>> {
-    
+/// of the `.nxs`-formatted code.
+/// 
+/// This also mutates the given `ctx` and `declared` arguments, adding any found constant or 
+pub fn compile(code: &str, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>) -> anyhow::Result<String> 
+{    
     let sys_domains: HashMap<String, [f64; 2]>;
     let sys_guesses: HashMap<String, f64>;
+    let sys_consts:  HashMap<String, f64>;
     
     let mut nil = comments(code); 
+
+    // Copy-paste all common engineering constants (this happens first so users can rename constants)
+    nil = consts(&nil)?;
+
+    // Copy-paste any unit conversions (this happens second so they can be used in const definitions)
+    nil = conversions(&nil)?;
+
+    // Set all constants used in the solution
+    (nil, sys_consts) = const_values(&nil)?;
+    for (var, val) in sys_consts
+    {
+        ctx.add_const_to_ctx(&var, val);
+    }
+
+    // Set all domains for variables in the solution
     (nil, sys_domains) = domains(&nil);
     for (var, bounds) in sys_domains
     {
@@ -170,6 +195,7 @@ pub fn compile(code: &str, ctx: &mut ContextHashMap, declared: &mut HashMap<Stri
         }
     }
 
+    // Set all initial guesses for variables in the solution
     (nil, sys_guesses) = guess_values(&nil);
     for (var, guess) in sys_guesses
     {
@@ -183,10 +209,7 @@ pub fn compile(code: &str, ctx: &mut ContextHashMap, declared: &mut HashMap<Stri
         }
     }
 
-    nil = consts(&nil)?;
-
-    nil = conversions(&nil)?;
-
+    // Format all conditional statements. (this happens last since most information is needed in order to evaluate the expression)
     nil = conditionals(&nil)?;
 
     Ok(nil)
