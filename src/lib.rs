@@ -16,7 +16,7 @@ use crate::shunting::{ContextHashMap, ContextLike};
 use crate::system::{ConstrainResult, get_equation_unknowns, SystemBuilder};
 
 /// Solves a single equation for a single unknown value, returning a `bool` indicating if the solution attempt was successful 
-fn try_solve_single_unknown_eqn(eqn_pool: &mut Vec<String>, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, margin: f64, limit: usize) -> anyhow::Result<bool>
+fn try_solve_single_unknown_eqn(eqn_pool: &mut Vec<String>, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, log_step: &mut String, margin: f64, limit: usize) -> anyhow::Result<bool>
 {
     for (i, equation) in eqn_pool.iter().enumerate()
     {
@@ -38,13 +38,17 @@ fn try_solve_single_unknown_eqn(eqn_pool: &mut Vec<String>, ctx: &mut ContextHas
 
         let soln = solve_equation_with_context(equation, ctx, var_info[0], var_info[1], var_info[2], margin, limit)?;
         ctx.add_var_with_domain_to_ctx(&soln.0, soln.1, var_info[1], var_info[2]);
+        *log_step = format!(
+            "Var: {:#?} \nEquation: {}", 
+            soln.0, equation
+        );
         eqn_pool.remove(i);
         return Ok(true);
     }
     Ok(false)
 }
 
-fn try_solve_subsystem_of_equations(eqn_pool: &mut Vec<String>, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, margin: f64, limit: usize) -> anyhow::Result<bool>
+fn try_solve_subsystem_of_equations(eqn_pool: &mut Vec<String>, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, log_step: &mut String, margin: f64, limit: usize) -> anyhow::Result<bool>
 {
     for equation in &*eqn_pool
     {
@@ -74,6 +78,8 @@ fn try_solve_subsystem_of_equations(eqn_pool: &mut Vec<String>, ctx: &mut Contex
             }
         }
             
+        *log_step = format!("{:#?}", builder);
+
         // Solve the found constrained system:
         if let Some(mut system) = builder.build_system()
         {
@@ -102,8 +108,9 @@ fn try_solve_subsystem_of_equations(eqn_pool: &mut Vec<String>, ctx: &mut Contex
 /// # Example
 /// ```
 /// ```
-pub fn basic_solve(system: &str, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, margin: f64, limit: usize) -> anyhow::Result<ContextHashMap>
+pub fn basic_solve(system: &str, ctx: &mut ContextHashMap, declared: &mut HashMap<String, [f64; 3]>, margin: f64, limit: usize) -> anyhow::Result<(Vec<String>, ContextHashMap)>
 {
+    let mut log = vec![];
     let mut eqn_pool = system.split('\n')
         .filter(|x| x.contains('='))
         .map(|x| x.to_owned())
@@ -111,25 +118,28 @@ pub fn basic_solve(system: &str, ctx: &mut ContextHashMap, declared: &mut HashMa
 
     loop
     {
+        let mut log_step = String::default();
         // Get less expensive solutions:
-        if try_solve_single_unknown_eqn(&mut eqn_pool, ctx, declared, margin, limit)?
+        if try_solve_single_unknown_eqn(&mut eqn_pool, ctx, declared, &mut log_step, margin, limit)?
         {
+            log.push(log_step);
             continue;
         }
 
         // Dig in and solve a more expensive subsystem:
-        else if try_solve_subsystem_of_equations(&mut eqn_pool, ctx, declared, margin, limit)?
+        else if try_solve_subsystem_of_equations(&mut eqn_pool, ctx, declared, &mut log_step, margin, limit)?
         {
+            log.push(log_step);
             continue;
         }
         
         break;
     }
-    Ok(ctx.clone())
+    Ok((log, ctx.clone()))
 }
 
 /// Solves a system of equations with additional syntax used to indicate unit conversions, 
-pub fn solve_with_preprocessors(system: &str, margin: f64, limit: usize) -> anyhow::Result<ContextHashMap>
+pub fn solve_with_preprocessors(system: &str, margin: f64, limit: usize) -> anyhow::Result<(Vec<String>, ContextHashMap)>
 {
     let mut ctx = new_context(); 
     let mut declared = HashMap::new();
