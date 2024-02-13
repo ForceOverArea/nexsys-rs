@@ -1,6 +1,7 @@
 use std::{env, process};
 use std::fs::{read_to_string, write};
-use nexsys::{solve, parsing::{conditionals, conversions, consts}};
+use geqslib::shunting::Token;
+use nexsys::{solve_with_preprocessors, parsing::{conditionals, conversions, consts}};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -13,13 +14,11 @@ USAGE:
 nxc <FILEPATH> <OPTIONS>
 
 OPTIONS:
---tolerance, -tol <float>              The tolerance that the solver should hit before returning a solution
+--margin, -tol <float>              The margin that the solver should hit before returning a solution
 --max-iterations, -max <int>           The maximum number of iterations that the solver can take to converge
---allow-nonconvergence, -ancv          Whether or not the solver should allow a solution to not converge
 --output-file, -o                      Sends the results to a .txt file rather than printing them in the terminal
 --verbose -v                           Prints compiled nexsys code in the terminal for debugging
-"#
-        );
+"#);
         process::exit(0);
     }
 
@@ -31,20 +30,19 @@ OPTIONS:
         }
     };
 
-    let mut tolerance = None;
-    let mut max_iterations = None; 
-    let mut allow_nonconvergence = false;
+    let mut margin = 0.0;
+    let mut limit = 1; 
     let mut output_file = false; // todo: make this produce different file types
 
     for i in 0..args.len() {
-        if args[i] == *"--tolerance" || args[i] == *"-tol" {
+        if args[i] == *"--margin" || args[i] == *"-tol" {
             match args[i+1].parse::<f64>() {
                 Ok(o) => {
-                    println!("[nxc].....tolerance set to {o}");
-                    tolerance = Some(o);
+                    println!("[nxc].....margin set to {o}");
+                    margin = o;
                 },
                 Err(_) => {
-                    println!("[nxc].....ERR: tolerance is not a valid float value");
+                    println!("[nxc].....ERR: margin is not a valid float value");
                     process::exit(1);
                 }
             }
@@ -53,17 +51,13 @@ OPTIONS:
             match args[i+1].parse::<usize>() {
                 Ok(o) => {
                     println!("[nxc].....iteration limit set to: {o}");
-                    max_iterations = Some(o);
+                    limit = o;
                 },
                 Err(_) => {
                     println!("[nxc].....ERR: iteration limit is not a valid integer value");
                     process::exit(1);
                 }
             }
-        }
-        if args[i] == *"--allow-nonconvergence" || args[i] == *"-ancv" {
-            println!("[nxc].....nonconvergence is allowed");
-            allow_nonconvergence = true;
         }
         if args[i] == *"--verbose" || args[i] == *"-v" {
             println!("[nxc].....Printing compiled code...");
@@ -80,7 +74,7 @@ OPTIONS:
         }
     }
 
-    let (soln, log) = match solve(&system, tolerance, max_iterations, allow_nonconvergence) {
+    let (log, soln) = match solve_with_preprocessors(&system, margin, limit) {
         Ok(o) => o,
         Err(e) => {
             println!("[nxc].....ERR: nxc could not solve the system");
@@ -92,7 +86,23 @@ OPTIONS:
     let output = format!(
         "[->] Nexsys - {} results:\n\nSolution:\n+=======+\n{}\nProcedure:\n+========+\n{}\n",
         &args[1],
-        soln.into_iter().map(|i| format!("{} = {}\n", i.0, i.1.as_f64())).collect::<String>(),
+        soln.into_iter().map(|i| {
+            if let Token::Var(v) = i.1
+            {
+                format!("{} = {}\n", i.0, f64::from(*v.borrow()))
+            }
+            else 
+            {
+                if let Token::Num(n) = i.1
+                {
+                    if i.0 != "pi" && i.0 != "e"
+                    {
+                        return format!("{} = {}\n", i.0, n);
+                    }
+                }
+                String::default()
+            }
+        }).collect::<String>(),
         log.join("\n")
     );
 
